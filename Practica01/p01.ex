@@ -24,6 +24,15 @@ defmodule P01 do
     end
   end
 
+  @doc """
+  Calcula el sucesor de un numero
+  ## Parametro
+    - `num`: El numero que se calcula el sucesor.
+  ## Retorna
+    El sucesor de num
+  ## Errores
+    Lanza `ArgumentError` si el parametro no es un numero
+  """
   def sucesor(num) do
     cond do
       is_number(num) ->
@@ -33,15 +42,264 @@ defmodule P01 do
     end
   end
 
+  @doc """
+  Calcula el maximo de dos numeros
+  ## Parametro
+    - `a`: El numero a.
+    - `b`: El numero b.
+  ## Retorna
+    El numero maximo
+  ## Errores
+    Lanza `ArgumentError` si los parametros no son numeros
+  """
   def maximo(a,b) do
     cond do
       is_number(a) and is_number(b) ->
         if a > b, do: a, else: b
       not is_number(a) ->
-        raise ArgumentError, "El parametro debe ser un numero"
+        raise ArgumentError, "Los parametros deben ser numeros"
       not is_number(b) ->
+        raise ArgumentError, "Los parametros deben ser numeros"
+    end
+  end
+
+  @doc """
+  Calcula la suma de dos numeros
+  ## Parametro
+    - `a`: El numero a.
+    - `b`: El numero b.
+  ## Retorna
+    La suma de a y b
+  ## Errores
+    Lanza `ArgumentError` si los parametros no son numeros
+  """
+  def suma(a,b) do
+    cond do
+      is_number(a) and is_number(b) ->
+        a + b
+      not is_number(a) ->
+        raise ArgumentError, "Los parametros deben ser numeros"
+      not is_number(b) ->
+        raise ArgumentError, "Los parametros deben ser numeros"
+    end
+  end
+
+  @doc """
+  Calcula la resta de dos numeros
+  ## Parametro
+    - `a`: El numero a.
+    - `b`: El numero b.
+  ## Retorna
+    La resta de a y b
+  ## Errores
+    Lanza `ArgumentError` si los parametros no son numeros
+  """
+  def resta(a,b) do
+    cond do
+      is_number(a) and is_number(b) ->
+        a - b
+      not is_number(a) ->
+        raise ArgumentError, "Los parametros deben ser numeros"
+      not is_number(b) ->
+        raise ArgumentError, "Los parametros deben ser numeros"
+    end
+  end
+
+  @doc """
+  Calcula la multiplicacion de conjugados de dos numeros
+  ## Parametro
+    - `a`: El numero a.
+    - `b`: El numero b.
+  ## Retorna
+    La multiplicacion de congujados de a y b
+  ## Errores
+    Lanza `ArgumentError` si los parametros no son numeros
+  """
+  def multiplicacionConjugados(a,b) do
+    cond do
+      is_number(a) and is_number(b) ->
+        (a + b) * (a - b)
+      not is_number(a) ->
+        raise ArgumentError, "Los parametros deben ser numeros"
+      not is_number(b) ->
+        raise ArgumentError, "Los parametros deben ser numeros"
+    end
+  end
+
+  @doc """
+  Devuelve la negacion de un booleano
+  ## Parametro
+    - `bool`: El valor booleano
+  ## Retorna
+    La negacion de bool
+  ## Errores
+    Lanza `ArgumentError` si el parametro no es booleano
+  """
+  def negacion(bool) do
+    cond do
+      is_boolean(bool) ->
+        if true == bool do
+          false
+        else
+          true
+        end
+      not is_boolean(bool) ->
+        raise ArgumentError, "El parametro debe ser un booleano"
+    end
+  end
+
+  @doc """
+  Devuelve la conjuncion de dos booleanos
+  ## Parametro
+    - `b1`: El valor booleano 1.
+    - `b2`: El valor booleano 2.
+  ## Retorna
+    La conjuncion de b1 & b2
+  ## Errores
+    Lanza `ArgumentError` si los parametros no son booleanos
+  """
+  def conjuncion(b1, b2) do
+    cond do
+      is_boolean(b1) and is_boolean(b2) ->
+        if b1 == true and b2 == true do
+          true
+        else
+          false
+        end
+      not is_boolean(b1) ->
+        raise ArgumentError, "Los parametros deben ser booleanos"
+      not is_boolean(b2) ->
+        raise ArgumentError, "Los parametros deben ser booleanos"
+    end
+  end
+
+  @doc """
+  Devuelve la disyuncion de dos booleanos
+  ## Parametro
+    - `b1`: El valor booleano b1.
+    - `b2`: El valor booleano b2.
+  ## Retorna
+    La disyuncion de b1 || b2
+  ## Errores
+    Lanza `ArgumentError` si los parametros no son booleanos
+  """
+  def disyuncion(b1, b2) do
+    cond do
+      is_boolean(b1) and is_boolean(b2) ->
+        cond do
+          b1 == true and b2 == true ->
+            true
+          b1 == true and b2 == false ->
+            true
+          b1 == false and b2 == true ->
+            true
+          true ->
+            false
+        end
+      not is_boolean(b1) ->
+        raise ArgumentError, "Los parametros deben ser booleanos"
+      not is_boolean(b2) ->
+        raise ArgumentError, "Los parametros deben ser booleanos"
+    end
+  end
+
+  @doc """
+  Calcula el absoluto de un numero
+  ## Parametro
+    - `num`: El numero a calcular el absoluto.
+  ## Retorna
+    El absoluto de num
+  ## Errores
+    Lanza `ArgumentError` si el parametro no es un numero
+  """
+  def absoluto(num) do
+    cond do
+      is_number(num) ->
+        if num < 0 do
+          -1 * num
+        else
+          num
+        end
+      not is_number(num) ->
         raise ArgumentError, "El parametro debe ser un numero"
     end
+  end
+
+  @doc """
+  Calcula el area del circulo
+  ## Parametro
+    - `num`: El radio del numero.
+  ## Retorna
+    El area del circulo
+  ## Errores
+    Lanza `ArgumentError` si el parametro no es un numero
+  """
+  def areaCirculo(num) do
+    cond do
+      is_number(num) ->
+        3.14 * (num * num)
+      not is_number(num) ->
+        raise ArgumentError, "El parametro debe ser un numero"
+    end
+  end
+
+  @doc """
+  Calcula la suma de Gauss de n recursivamente
+  ## Parametro
+    - `num`: El numero al calcular la suma de Gauss.
+  ## Retorna
+    La suma de Gauss
+  ## Errores
+    Lanza `ArgumentError` si el parametro no es un numero
+  """
+  def sumaGaussRec(0), do: 0
+  def sumaGaussRec(num) do
+    cond do
+      is_number(num) ->
+        num + sumaGaussRec(num - 1)
+      not is_number(num) ->
+        raise ArgumentError, "El parametro debe ser un numero"
+    end
+  end
+
+  @doc """
+  Calcula la suma de Gauss de n
+  ## Parametro
+    - `num`: El numero al calcular la suma de Gauss.
+  ## Retorna
+    La suma de Gauss
+  ## Errores
+    Lanza `ArgumentError` si el parametro no es un numero
+  """
+  def sumaGauss(num) do
+    cond do
+      is_number(num) ->
+        (num * (num + 1))/2
+      not is_number(num) ->
+        raise ArgumentError, "El parametro debe ser un numero"
+    end
+  end
+
+  @doc """
+  Calcula el area de un triangulo
+  ## Parametro
+    - `{x1,y1}`: Punto1 donde x1 y y1 son numeros.
+    - `{x2,y2}`: Punto1 donde x2 y y2 son numeros.
+    - `{x3,y3}`: Punto1 donde x3 y y3 son numeros.
+  ## Retorna
+    El area del triangulo con puntos {x1,y1},{x2,y2},{x3,y3}
+  ## Errores
+    Lanza `ArgumentError` si el parametro no son tuplas y no son numeros
+  """
+  def areaTriangulo({x1,y1},{x2,y2},{x3,y3}) do
+    cond do
+      is_tuple({x1, y1}) and is_number(x1) and is_number(y1) and
+      is_tuple({x2, y2}) and is_number(x2) and is_number(y2) and
+      is_tuple({x3, y3}) and is_number(x3) and is_number(y3) ->
+        absoluto(x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2))/2
+      true ->
+        raise ArgumentError, "Los parametros deben ser tuplas y numeros"
+      end
   end
 
   # # ---------------------------------------- Pruebas ----------------------------------------
@@ -64,78 +322,80 @@ defmodule P01 do
     assert maximo(4,4) == 4
   end
 
-  # test "pruebaSuma" do
-  #   IO.puts " -> Probando suma(num1, num2)"
-  #   assert suma(5, 6) == 11
-  #   assert suma(7,6) == 13
-  #   assert suma(4,4) == 8
-  # end
+  test "pruebaSuma" do
+    IO.puts " -> Probando suma(num1, num2)"
+    assert suma(5, 6) == 11
+    assert suma(7,6) == 13
+    assert suma(4,4) == 8
+  end
 
-  # test "pruebaResta" do
-  #   IO.puts " -> Probando resta(a, b)"
-  #   assert resta(5, 3) == 2
-  #   assert resta(7,6) == 1
-  #   assert resta(4,4) == 0
-  # end
+  test "pruebaResta" do
+    IO.puts " -> Probando resta(a, b)"
+    assert resta(5, 3) == 2
+    assert resta(7,6) == 1
+    assert resta(4,4) == 0
+  end
 
-  # test "pruebaMultiplicacionConjugada" do
-  #   IO.puts " -> Probando multipliacionConjugados(a, b)"
-  #   assert multiplicacionConjugados(5, 3) == 16
-  #   assert multiplicacionConjugados(7,6) == 13
-  #   assert multiplicacionConjugados(4,4) == 0
-  # end
+  test "pruebaMultiplicacionConjugada" do
+    IO.puts " -> Probando multipliacionConjugados(a, b)"
+    assert multiplicacionConjugados(5, 3) == 16
+    assert multiplicacionConjugados(7,6) == 13
+    assert multiplicacionConjugados(4,4) == 0
+  end
 
-  # test "pruebaNegacion" do
-  #   IO.puts " -> Probando negacion(bool)"
-  #   assert negacion(true) == false
-  #   assert negacion(false) == true
-  # end
+  test "pruebaNegacion" do
+    IO.puts " -> Probando negacion(bool)"
+    assert negacion(true) == false
+    assert negacion(false) == true
+  end
 
-  # test "pruebaConjucion" do
-  #   IO.puts " -> Probando conjuncion(bool1, bool2)"
-  #   assert conjuncion(true, true) == true
-  #   assert conjuncion(false, true) == false
-  #   assert conjuncion(true, false) == false
-  #   assert conjuncion(false, false) == false
-  # end
+  test "pruebaConjucion" do
+    IO.puts " -> Probando conjuncion(bool1, bool2)"
+    assert conjuncion(true, true) == true
+    assert conjuncion(false, true) == false
+    assert conjuncion(true, false) == false
+    assert conjuncion(false, false) == false
+  end
 
-  # test "pruebaDisyuncion" do
-  #   IO.puts " -> Probando disyuncion(bool1, bool2)"
-  #   assert disyuncion(true, true) == true
-  #   assert disyuncion(false, true) == true
-  #   assert disyuncion(true, false) == true
-  #   assert disyuncion(false, false) == false
-  # end
+  test "pruebaDisyuncion" do
+    IO.puts " -> Probando disyuncion(bool1, bool2)"
+    assert disyuncion(true, true) == true
+    assert disyuncion(false, true) == true
+    assert disyuncion(true, false) == true
+    assert disyuncion(false, false) == false
+  end
 
-  # test "pruebaAbsoluto" do
-  #   IO.puts " -> Probando absoluto(num)"
-  #   assert absoluto(Enum.random(-1000..0)) >= 0
-  #   assert absoluto(Enum.random(0..1000)) >= 0
-  # end
+  test "pruebaAbsoluto" do
+    IO.puts " -> Probando absoluto(num)"
+    assert absoluto(Enum.random(-1000..0)) >= 0
+    assert absoluto(Enum.random(0..1000)) >= 0
+    assert absoluto(-10) == 10
+    assert absoluto(10) == 10
+  end
 
-  # test "pruebaAreaCirculo" do
-  #   IO.puts " -> Probando areaCirculo(r)"
-  #   assert areaCirculo(1) == 3.14
-  #   assert areaCirculo(2) == 12.56
-  # end
+  test "pruebaAreaCirculo" do
+    IO.puts " -> Probando areaCirculo(r)"
+    assert areaCirculo(1) == 3.14
+    assert areaCirculo(2) == 12.56
+  end
 
-  # test "pruebaSumaGaussRecursiva" do
-  #   IO.puts " -> Probando sumaGaussRec(n)"
-  #   assert sumaGaussRec(10) == 55
-  #   assert sumaGaussRec(15) == 120
-  # end
+  test "pruebaSumaGaussRecursiva" do
+    IO.puts " -> Probando sumaGaussRec(n)"
+    assert sumaGaussRec(10) == 55
+    assert sumaGaussRec(15) == 120
+  end
 
-  # test "pruebaSumaGauss" do
-  #   IO.puts " -> Probando sumaGauss(n)"
-  #   assert sumaGauss(10) == 55
-  #   assert sumaGauss(15) == 120
-  # end
+  test "pruebaSumaGauss" do
+    IO.puts " -> Probando sumaGauss(n)"
+    assert sumaGauss(10) == 55
+    assert sumaGauss(15) == 120
+  end
 
-  # test "pruebaAreaTriangulo" do
-  #   IO.puts " -> Probando areaTriangulo(a, b, c)"
-  #   assert areaTriangulo({2,0}, {3,4}, {-2,5}) == 10.5
-  #   assert areaTriangulo({3,4}, {4,7}, {6,-3}) == 8
-  # end
+  test "pruebaAreaTriangulo" do
+    IO.puts " -> Probando areaTriangulo(a, b, c)"
+    assert areaTriangulo({2,0}, {3,4}, {-2,5}) == 10.5
+    assert areaTriangulo({3,4}, {4,7}, {6,-3}) == 8
+  end
 
   # test "pruebaRepiteCadena" do
   #   IO.puts " -> Probando repiteCadena(num, cadena)"
