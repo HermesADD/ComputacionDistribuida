@@ -21,7 +21,7 @@ Para probar las funciones
 
 ```shell
 ?- iex
-?- c "p01.ex"
-?- P01."nombreDeLaFuncion(parametros)"
+iex(1)> c "p01.ex"
+iex(2)> P01."nombreDeLaFuncion(parametros)"
 ```
 
