@@ -1,4 +1,4 @@
-defmodule Node do
+defmodule GraphNode do
   @moduledoc """
   Modulo con las funciones de la Node, representa un nodo en una gráfica
   además de sus funciones que se pueden realizar con cada uno.
@@ -12,20 +12,15 @@ defmodule Node do
     - `name`: El nombre del nodo
     - `neighbors`: una lista opcional de vecinos, que por defecto está vacía.
 
-  ## Ejemplo
-    iex> pid = Node.start_node(1, "Nodo1")
-    Se crea un nuevo nodo con ID: 1, Nombre: Nodo1
-    #PID<0.120.0>
-
   Inicia el proceso del nodo y devuelve el PID del proceso del nodo.
   """
-  def start_node(id, name, neighbors \\ []) do
+  def start_node(id, name, neighbors \\ [], leader\\ nil) do
     IO.puts("Se crea un nuevo nodo con ID: #{id}, Nombre: #{name}")
-    spawn(fn -> node_loop(id, name, neighbors) end)
+    spawn(fn -> manager(id, name, neighbors, leader) end)
   end
 
   @doc """
-  Bucle principal del nodo, que gestiona la recepción de mensajes y la manipulación de sus vecinos.
+  Gestor del nodo, gestiona la recepción de mensajes y la manipulación de sus vecinos.
 
   El proceso espera varios tipos de mensajes:
 
@@ -33,62 +28,73 @@ defmodule Node do
     - `{:add_neighbor, neighbor_pid}`: Añade un nuevo vecino al nodo.
     - `{:send_message, _neighbor_id, msg}`: Envía un mensaje a todos los vecinos del nodo.
     - `:get_neighbors`: Muestra la lista de procesos que son vecinos del nodo.
+    - `{:proclaim_leader, from_id}`: Mecanismo de elección de lider
     - Otros mensajes no reconocidos serán capturados y se mostrará un mensaje indicando que no son conocidos.
 
   ## Parámetros
     - `id`: El identificador único del nodo (ID).
     - `name`: El nombre del nodo.
     - `neighbors`: La lista de procesos vecinos del nodo.
-
-  ## Ejemplo
-    iex> send(pid, {:message, 2, "Hola"})
-    Nodo1 (ID: 1) recibió un mensaje de nodo 2: Hola
-
-    iex> send(pid, {:add_neighbor, neighbor_pid})
-    iex> send(pid, :get_neighbors)
-    Vecinos del nodo Nodo1 (ID: 1): [#PID<0.121.0>]
-
-  El bucle continúa recibiendo mensajes y actualizando el estado del nodo.
+    - `leader`: Indica el lider del nodo, si es que tiene
+    - `accepte_leaders`: Nos ayuda a que si el vecino ya recibio al lider, no se vuelve a mostrar otra vez y evitemos repeticiones
   """
-  defp node_loop(id, name, neighbors) do
+  def manager(id, name, neighbors, leader, accepted_leaders \\ MapSet.new()) do
     receive do
+      #Recibe un mensaje de un nodo a otro.
       {:message, from_id, msg} ->
         IO.puts("#{name} (ID: #{id}) recibió un mensaje de nodo #{from_id}: #{msg}")
-        node_loop(id, name, neighbors)
+        manager(id, name, neighbors, leader, accepted_leaders)
 
+      #Agrega un vecino al nodo
       {:add_neighbor, neighbor_pid} ->
-        node_loop(id, name, [neighbor_pid | neighbors])
+        manager(id, name, [neighbor_pid | neighbors], leader, accepted_leaders)
 
+      #Envia un mensaje de un nodo a sus vecinos
       {:send_message, _neighbor_id, msg} ->
-        Enum.each(neighbors, fn neighbor_pid ->
-          send(neighbor_pid, {:message, id, msg})
-        end)
-        node_loop(id, name, neighbors)
+        Enum.each(neighbors, fn neighbor -> send(neighbor, {:message, id, msg}) end)
+        manager(id, name, neighbors, leader, accepted_leaders)
 
+      #Obtiene los vecinos del nodo
       :get_neighbors ->
         IO.puts("Vecinos del nodo #{name} (ID: #{id}): #{inspect(neighbors)}")
-        node_loop(id, name, neighbors)
+        manager(id, name, neighbors, leader, accepted_leaders)
+
+      # Mecanismo de elección de líder
+      {:proclaim_leader, from_id} ->
+        # Si aún no hemos aceptado a este líder, lo aceptamos y propagamos el mensaje
+        if not MapSet.member?(accepted_leaders, from_id) do
+          new_accepted_leaders = MapSet.put(accepted_leaders, from_id)
+
+          # Verificamos si el nodo actual acepta a este líder
+          if from_id < id or from_id == id do
+            IO.puts("#{name} (ID: #{id}) acepta que el nodo con ID #{from_id} es el líder.")
+          else
+            IO.puts("#{name} (ID: #{id}) no acepta que el nodo con ID #{from_id} sea el líder.")
+          end
+
+          # Propagamos el mensaje a los vecinos
+          Enum.each(neighbors, fn neighbor -> send(neighbor, {:proclaim_leader, from_id}) end)
+          manager(id, name, neighbors, leader, new_accepted_leaders)
+        else
+          # Si ya lo aceptamos, continuamos sin hacer nada
+          manager(id, name, neighbors, leader, accepted_leaders)
+        end
 
       _ ->
-        IO.puts("#{name} (ID: #{id}) recibió un mensaje desconocido.")
-        node_loop(id, name, neighbors)
+        IO.puts("#{name} (ID: #{id}) recibió un mensaje no reconocido.")
+        manager(id, name, neighbors, leader)
     end
   end
 end
 
 defmodule Graph do
-  @doc """
+  @moduledoc """
   Módulo para gestiona gráficas. Permite iniciar una gráfica, agregar nodos,
   conectarlos entre sí, y enviar mensajes a través de los nodos.
   """
 
   @doc """
   Inicializa una nueva gráfica vacía.
-
-  ## Ejemplo
-
-    iex> graph = Graph.start_graph()
-    %{}
 
   Devuelve un mapa vacío que representa la gráfica.
   """
@@ -104,32 +110,20 @@ defmodule Graph do
     - `id`: El identificador único del nodo.
     - `name`: El nombre del nodo.
 
-  ## Ejemplo
-    iex> graph = Graph.start_graph()
-    iex> graph = Graph.add_node(graph, 1, "Nodo1")
-    Se crea un nuevo nodo con ID: 1, Nombre: Nodo1
-    %{1 => #PID<0.121.0>}
-
   Devuelve la gráfica actualizada con el nuevo nodo agregado.
   """
   def add_node(graph, id, name) do
-    node_pid = Node.start_node(id, name)
+    node_pid = GraphNode.start_node(id, name)
     Map.put(graph, id, node_pid)
   end
 
   @doc """
-  Conecta dos nodos de la gráfica (gráfica no dirigido).
+  Conecta dos nodos de la gráfica, en este caso la gráfica es no dirigida.
 
   ## Parámetros
     - `graph`: La gráfica actual.
     - `id1`: El identificador del primer nodo.
     - `id2`: El identificador del segundo nodo.
-
-  ## Ejemplo
-    iex> graph = Graph.add_node(%{}, 1, "Nodo1")
-    iex> graph = Graph.add_node(graph, 2, "Nodo2")
-    iex> Graph.connect_nodes(graph, 1, 2)
-    Nodos 1 y 2 conectados.
 
   Envía mensajes a ambos nodos para que se añadan como vecinos mutuamente.
   Si uno o ambos nodos no existen, muestra un mensaje de error.
@@ -157,13 +151,6 @@ defmodule Graph do
     - `from_id`: El identificador del nodo desde el cual se enviará el mensaje.
     - `msg`: El mensaje que será enviado.
 
-  ## Ejemplo
-      iex> graph = Graph.add_node(%{}, 1, "Nodo1")
-      iex> graph = Graph.add_node(graph, 2, "Nodo2")
-      iex> Graph.connect_nodes(graph, 1, 2)
-      iex> Graph.send_message(graph, 1, "Hola vecinos")
-      Nodo1 (ID: 1) recibió un mensaje de nodo 1: Hola vecinos
-
   Envía un mensaje desde el nodo identificado por `from_id` a todos sus vecinos.
   Si el nodo no existe, muestra un mensaje de error.
   """
@@ -175,57 +162,25 @@ defmodule Graph do
       IO.puts("Nodo con ID: #{from_id} no encontrado.")
     end
   end
-end
 
- @doc """
-  Bucle principal del nodo, que gestiona la recepción de mensajes y la manipulación de sus vecinos.
+  @doc """
+  Envía un mensaje a un nodo dentro de la gráfica para proclamarlo como líder.
 
-  Este proceso también incluye un mecanismo para la elección de líder:
-    - Cada nodo puede proclamarse como líder.
-    - Sin embargo, si recibe una proclamación de otro nodo con un ID menor,
-      ese nodo será aceptado como líder.
-  
   ## Parámetros
-    - `id`: El identificador único del nodo (ID).
-    - `name`: El nombre del nodo.
-    - `neighbors`: La lista de procesos vecinos del nodo.
-    - `is_leader`: Bandera para saber si el nodo es el líder actual.
+    - `graph`: La gráfica actual.
+    - `node_id`: El identificador del nodo al que se le enviará el mensaje para proclamarlo como líder.
+
+
+  Si el nodo con `node_id` existe en el `graph`, se envía un mensaje al proceso asociado al nodo con la
+  tupla `{:proclaim_leader, node_id}`. Si el nodo no se encuentra en el `graph`, se imprime un mensaje
+  indicando que no se encontró el nodo con ese `node_id`.
   """
-  defp node_loop(id, name, neighbors, is_leader) do
-    receive do
-      {:message, from_id, msg} ->
-        IO.puts("#{name} (ID: #{id}) recibió un mensaje de nodo #{from_id}: #{msg}")
-        node_loop(id, name, neighbors, is_leader)
-
-      {:add_neighbor, neighbor_pid} ->
-        IO.puts("#{name} (ID: #{id}) agregó un nuevo vecino.")
-        node_loop(id, name, [neighbor_pid | neighbors], is_leader)
-
-      {:send_message, _neighbor_id, msg} ->
-        Enum.each(neighbors, fn neighbor -> send(neighbor, {:message, id, msg}) end)
-        node_loop(id, name, neighbors, is_leader)
-
-      :get_neighbors ->
-        IO.puts("Vecinos del nodo #{name} (ID: #{id}): #{inspect(neighbors)}")
-        node_loop(id, name, neighbors, is_leader)
-
-      # Mecanismo de elección de líder
-      {:proclaim_leader, from_id} ->
-        if from_id < id do
-          # Si el nodo remitente tiene un ID menor, aceptamos que es el líder
-          IO.puts("#{name} (ID: #{id}) acepta que el nodo con ID #{from_id} es el líder.")
-          Enum.each(neighbors, fn neighbor -> send(neighbor, {:proclaim_leader, from_id}) end)
-          node_loop(id, name, neighbors, false)
-        else
-          # Si el nodo actual tiene el ID más bajo, sigue siendo el líder
-          IO.puts("#{name} (ID: #{id}) se proclama como líder.")
-          Enum.each(neighbors, fn neighbor -> send(neighbor, {:proclaim_leader, id}) end)
-          node_loop(id, name, neighbors, true)
-        end
-
-      _ ->
-        IO.puts("#{name} (ID: #{id}) recibió un mensaje no reconocido.")
-        node_loop(id, name, neighbors, is_leader)
+  def proclaim_leader(graph, node_id) do
+    pid = Map.get(graph, node_id)
+    if pid do
+      send(pid, {:proclaim_leader, node_id})
+    else
+      IO.puts("Nodo con ID: #{node_id} no encontrado.")
     end
   end
 end
@@ -262,3 +217,8 @@ graph = Graph.connect_nodes(graph, 18, 19)
 Graph.send_message(graph, 22, "Hola desde Nodo v")
 Graph.send_message(graph, 24, "Hola desde Nodo x")
 Graph.send_message(graph, 19, "Hola desde Nodo s")
+
+#Nodo v
+Graph.proclaim_leader(graph,22)
+#Nodo t
+Graph.proclaim_leader(graph,20)
