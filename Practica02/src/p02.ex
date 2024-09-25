@@ -177,28 +177,6 @@ defmodule Graph do
   end
 end
 
-defmodule Node do
-  @moduledoc """
-  Módulo con las funciones de la Node, representa un nodo en una gráfica
-  además de sus funciones que se pueden realizar con cada uno.
-  """
-
-  @doc """
-  Inicia un nuevo nodo en la gráfica.
-
-  ## Parámetros
-    - `id`: El identificador único del nodo(ID).
-    - `name`: El nombre del nodo.
-    - `neighbors`: una lista opcional de vecinos, que por defecto está vacía.
-  """
-  def start_node(id, name, neighbors \\ []) do
-    IO.puts("Se crea un nuevo nodo con ID: #{id}, Nombre: #{name}")
-    spawn(fn -> node_loop(id, name, neighbors, false) end)
-  end
-
-  @doc """
-  Bucle principal del nodo, que gestiona la recepción de mensajes y la manipulación de sus vecinos.
-
   Este proceso también incluye un mecanismo para la elección de líder:
     - Cada nodo puede proclamarse como líder.
     - Sin embargo, si recibe una proclamación de otro nodo con un ID menor,
