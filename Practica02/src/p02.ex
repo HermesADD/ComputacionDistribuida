@@ -177,6 +177,9 @@ defmodule Graph do
   end
 end
 
+ @doc """
+  Bucle principal del nodo, que gestiona la recepción de mensajes y la manipulación de sus vecinos.
+
   Este proceso también incluye un mecanismo para la elección de líder:
     - Cada nodo puede proclamarse como líder.
     - Sin embargo, si recibe una proclamación de otro nodo con un ID menor,
