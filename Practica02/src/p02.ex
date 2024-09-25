@@ -177,6 +177,79 @@ defmodule Graph do
   end
 end
 
+defmodule Node do
+  @moduledoc """
+  Módulo con las funciones de la Node, representa un nodo en una gráfica
+  además de sus funciones que se pueden realizar con cada uno.
+  """
+
+  @doc """
+  Inicia un nuevo nodo en la gráfica.
+
+  ## Parámetros
+    - `id`: El identificador único del nodo(ID).
+    - `name`: El nombre del nodo.
+    - `neighbors`: una lista opcional de vecinos, que por defecto está vacía.
+  """
+  def start_node(id, name, neighbors \\ []) do
+    IO.puts("Se crea un nuevo nodo con ID: #{id}, Nombre: #{name}")
+    spawn(fn -> node_loop(id, name, neighbors, false) end)
+  end
+
+  @doc """
+  Bucle principal del nodo, que gestiona la recepción de mensajes y la manipulación de sus vecinos.
+
+  Este proceso también incluye un mecanismo para la elección de líder:
+    - Cada nodo puede proclamarse como líder.
+    - Sin embargo, si recibe una proclamación de otro nodo con un ID menor,
+      ese nodo será aceptado como líder.
+  
+  ## Parámetros
+    - `id`: El identificador único del nodo (ID).
+    - `name`: El nombre del nodo.
+    - `neighbors`: La lista de procesos vecinos del nodo.
+    - `is_leader`: Bandera para saber si el nodo es el líder actual.
+  """
+  defp node_loop(id, name, neighbors, is_leader) do
+    receive do
+      {:message, from_id, msg} ->
+        IO.puts("#{name} (ID: #{id}) recibió un mensaje de nodo #{from_id}: #{msg}")
+        node_loop(id, name, neighbors, is_leader)
+
+      {:add_neighbor, neighbor_pid} ->
+        IO.puts("#{name} (ID: #{id}) agregó un nuevo vecino.")
+        node_loop(id, name, [neighbor_pid | neighbors], is_leader)
+
+      {:send_message, _neighbor_id, msg} ->
+        Enum.each(neighbors, fn neighbor -> send(neighbor, {:message, id, msg}) end)
+        node_loop(id, name, neighbors, is_leader)
+
+      :get_neighbors ->
+        IO.puts("Vecinos del nodo #{name} (ID: #{id}): #{inspect(neighbors)}")
+        node_loop(id, name, neighbors, is_leader)
+
+      # Mecanismo de elección de líder
+      {:proclaim_leader, from_id} ->
+        if from_id < id do
+          # Si el nodo remitente tiene un ID menor, aceptamos que es el líder
+          IO.puts("#{name} (ID: #{id}) acepta que el nodo con ID #{from_id} es el líder.")
+          Enum.each(neighbors, fn neighbor -> send(neighbor, {:proclaim_leader, from_id}) end)
+          node_loop(id, name, neighbors, false)
+        else
+          # Si el nodo actual tiene el ID más bajo, sigue siendo el líder
+          IO.puts("#{name} (ID: #{id}) se proclama como líder.")
+          Enum.each(neighbors, fn neighbor -> send(neighbor, {:proclaim_leader, id}) end)
+          node_loop(id, name, neighbors, true)
+        end
+
+      _ ->
+        IO.puts("#{name} (ID: #{id}) recibió un mensaje no reconocido.")
+        node_loop(id, name, neighbors, is_leader)
+    end
+  end
+end
+
+
 # Crear una gráfica
 graph = Graph.start_graph()
 
