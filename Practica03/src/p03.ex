@@ -212,7 +212,6 @@ end
 
 defmodule Practica03Test do
   use ExUnit.Case
-  import Practica03
 
   alias Graph, as: G
 
