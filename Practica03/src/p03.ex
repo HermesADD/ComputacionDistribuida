@@ -213,8 +213,6 @@ end
 defmodule Practica03Test do
   use ExUnit.Case
 
-  alias Graph, as: G
-
   ExUnit.start()
 
   setup do
@@ -257,6 +255,7 @@ defmodule Practica03Test do
   end
 end
 
+## Ejecución realizada en la práctica anterior!
 
 # # Crear una gráfica
 # graph = Graph.start_graph()
