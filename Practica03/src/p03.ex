@@ -65,7 +65,13 @@ defmodule Graph do
   def send_message(graph, from_id, msg) do
     pid = Map.get(graph, from_id)
     if pid do
-      send(pid, {:send_message, from_id, msg})
+      case msg do
+        {:proponer, valor} ->
+          send(pid, {:proponer, valor})  # Enviar la propuesta de valor
+
+        _ ->
+          send(pid, {:send_message, from_id, msg})  # Enviar otros mensajes
+      end
     else
       IO.puts("Nodo con ID: #{from_id} no encontrado.")
     end
@@ -99,20 +105,20 @@ defmodule Graph do
   defp manager(id, name, neighbors, leader, accepted_leaders \\ MapSet.new(), valor_consensuado) do
     receive do
       {:id, new_id} ->
-        # Almacenar el nuevo ID
         IO.puts("#{name} (ID: #{id}) ahora tiene el ID #{new_id}.")
         manager(new_id, name, neighbors, leader, accepted_leaders, valor_consensuado)
 
       {:proponer, valor} ->
-        # Recibir y propagar el valor propuesto
-        IO.puts("#{name} (ID: #{id}) propone el valor: #{valor}.")
-        Enum.each(neighbors, fn neighbor ->
-          send(neighbor, {:proponer, valor})
-        end)
-        manager(id, name, neighbors, leader, accepted_leaders, valor)
+        if valor_consensuado == nil do
+          IO.puts("#{name} (ID: #{id}) propone el valor: #{valor}.")
+          Enum.each(neighbors, fn neighbor -> send(neighbor, {:proponer, valor}) end)
+          manager(id, name, neighbors, leader,accepted_leaders, valor)
+        else
+          IO.puts("#{name} (ID: #{id}) ya ha propuesto un valor.")
+          manager(id, name, neighbors, leader,accepted_leaders, valor_consensuado)
+        end
 
       {:comprobar} ->
-        # Comprobar que el nodo tiene el valor consensuado
         if valor_consensuado do
           IO.puts("#{name} (ID: #{id}) tiene el valor consensuado: #{valor_consensuado}.")
         else
@@ -130,7 +136,6 @@ defmodule Graph do
       {:send_message, _neighbor_id, msg} ->
         Enum.each(neighbors, fn neighbor -> send(neighbor, {:message, id, msg}) end)
         manager(id, name, neighbors, leader, accepted_leaders, valor_consensuado)
-
       :get_neighbors ->
         IO.puts("Vecinos del nodo #{name} (ID: #{id}): #{inspect(neighbors)}")
         manager(id, name, neighbors, leader, accepted_leaders, valor_consensuado)
@@ -146,7 +151,7 @@ defmodule Graph do
           end
 
           Enum.each(neighbors, fn neighbor -> send(neighbor, {:proclaim_leader, from_id}) end)
-          manager(id, name, neighbors, leader, new_accepted_leaders, valor_consensuado)
+          manager(id, name, neighbors, leader, new_accepted_leaders , valor_consensuado)
         else
           manager(id, name, neighbors, leader, accepted_leaders, valor_consensuado)
         end
@@ -254,6 +259,31 @@ defmodule Practica03Test do
     assert true
   end
 end
+# Iniciar el gráfico
+graph = Graph.start_graph()
+
+# Agregar nodos
+graph = Graph.add_node(graph, 1, "Nodo1")
+graph = Graph.add_node(graph, 2, "Nodo2")
+graph = Graph.add_node(graph, 3, "Nodo3")
+
+# Conectar nodos
+graph = Graph.connect_nodes(graph, 1, 2)
+graph = Graph.connect_nodes(graph, 2, 3)
+
+# Probar la función :id (cambiar el ID de un nodo)
+pid_nodo1 = Map.get(graph, 1)
+send(pid_nodo1, {:id, 10})  # Cambiar ID de Nodo1 a 10
+
+# Probar la función :proponer (proponer un valor a los vecinos)
+Graph.send_message(graph, 1, {:proponer, 42})  # Nodo1 propone el valor 42
+
+# Probar la función :comprobar (comprobar el valor consensuado en un nodo)
+send(pid_nodo1, {:comprobar})  # Comprobar valor en Nodo1
+
+# Comprobar el valor en otro nodo
+pid_nodo2 = Map.get(graph, 2)
+send(pid_nodo2, {:comprobar})  # Comprobar valor en Nodo2
 
 ## Ejecución realizada en la práctica anterior!
 
