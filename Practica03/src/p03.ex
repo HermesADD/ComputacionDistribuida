@@ -259,31 +259,34 @@ defmodule Practica03Test do
     assert true
   end
 end
-# Iniciar el gráfico
-graph = Graph.start_graph()
 
-# Agregar nodos
-graph = Graph.add_node(graph, 1, "Nodo1")
-graph = Graph.add_node(graph, 2, "Nodo2")
-graph = Graph.add_node(graph, 3, "Nodo3")
+## Ejecución ejemplo de la práctica realizada!
 
-# Conectar nodos
-graph = Graph.connect_nodes(graph, 1, 2)
-graph = Graph.connect_nodes(graph, 2, 3)
+# # Iniciar el gráfico
+# graph = Graph.start_graph()
 
-# Probar la función :id (cambiar el ID de un nodo)
-pid_nodo1 = Map.get(graph, 1)
-send(pid_nodo1, {:id, 10})  # Cambiar ID de Nodo1 a 10
+# # Agregar nodos
+# graph = Graph.add_node(graph, 1, "Nodo1")
+# graph = Graph.add_node(graph, 2, "Nodo2")
+# graph = Graph.add_node(graph, 3, "Nodo3")
 
-# Probar la función :proponer (proponer un valor a los vecinos)
-Graph.send_message(graph, 1, {:proponer, 42})  # Nodo1 propone el valor 42
+# # Conectar nodos
+# graph = Graph.connect_nodes(graph, 1, 2)
+# graph = Graph.connect_nodes(graph, 2, 3)
 
-# Probar la función :comprobar (comprobar el valor consensuado en un nodo)
-send(pid_nodo1, {:comprobar})  # Comprobar valor en Nodo1
+# # Probar la función :id (cambiar el ID de un nodo)
+# pid_nodo1 = Map.get(graph, 1)
+# send(pid_nodo1, {:id, 10})  # Cambiar ID de Nodo1 a 10
 
-# Comprobar el valor en otro nodo
-pid_nodo2 = Map.get(graph, 2)
-send(pid_nodo2, {:comprobar})  # Comprobar valor en Nodo2
+# # Probar la función :proponer (proponer un valor a los vecinos)
+# Graph.send_message(graph, 1, {:proponer, 42})  # Nodo1 propone el valor 42
+
+# # Probar la función :comprobar (comprobar el valor consensuado en un nodo)
+# send(pid_nodo1, {:comprobar})  # Comprobar valor en Nodo1
+
+# # Comprobar el valor en otro nodo
+# pid_nodo2 = Map.get(graph, 2)
+# send(pid_nodo2, {:comprobar})  # Comprobar valor en Nodo2
 
 ## Ejecución realizada en la práctica anterior!
 
