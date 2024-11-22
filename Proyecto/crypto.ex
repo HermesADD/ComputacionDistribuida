@@ -263,6 +263,20 @@ defmodule BlockchainNode do
     send(:"node_#{id}", {:propose_block, data})
   end
 
+  # Función principal de bucle que maneja los mensajes recibidos por el nodo.
+  #
+  # Parámetros:
+  #   - state: Un mapa con el estado actual del nodo que incluye:
+  #     * id: Identificador único del nodo
+  #     * neighbors: Lista de nodos vecinos
+  #     * blockchain: Lista de bloques en la cadena
+  #     * byzantine?: Booleano que indica si el nodo es bizantino
+  #     * processed_blocks: Conjunto de hashes de bloques ya procesados
+  #
+  # El bucle maneja los siguientes mensajes:
+  # - {:get_blockchain, from}: Envía la blockchain actual al proceso solicitante
+  # - {:propose_block, data}: Crea y propaga un nuevo bloque (normal o malicioso)
+  # - {:validate_block, block}: Valida y propaga un bloque recibido
   defp loop(state) do
     receive do
       {:get_blockchain, from} ->
@@ -270,7 +284,7 @@ defmodule BlockchainNode do
         loop(state)
 
       {:propose_block, data} when state.byzantine? ->
-        Logger.warn("🔥 Nodo #{state.id} (bizantino) generando bloque malicioso")
+        Logger.warn("Nodo #{state.id} (bizantino) generando bloque malicioso")
         garbage_block = Block.new("INVALID_DATA_#{:rand.uniform(1000)}", "INVALID_HASH")
         broadcast_to_neighbors(state.neighbors, {:validate_block, garbage_block})
         loop(state)
@@ -279,11 +293,11 @@ defmodule BlockchainNode do
         case Blockchain.insert(state.blockchain, data) do
           {:ok, new_chain} ->
             new_block = List.last(new_chain)
-            Logger.info("💎 Nodo #{state.id} creó nuevo bloque: #{String.slice(new_block.hash, 0..6)}")
+            Logger.info("Nodo #{state.id} creó nuevo bloque: #{String.slice(new_block.hash, 0..6)}")
             broadcast_to_neighbors(state.neighbors, {:validate_block, new_block})
             loop(%{state | blockchain: new_chain})
           {:error, reason} ->
-            Logger.error("❌ Nodo #{state.id}: #{reason}")
+            Logger.error("Nodo #{state.id}: #{reason}")
             loop(state)
         end
 
@@ -315,6 +329,11 @@ defmodule BlockchainNode do
     end
   end
 
+  # Envía un mensaje a todos los nodos vecinos.
+  #
+  # Parámetros:
+  #   - neighbors: Lista de identificadores de nodos vecinos.
+  #   - message: Mensaje a enviar a cada vecino.
   defp broadcast_to_neighbors(neighbors, message) do
     Enum.each(neighbors, fn neighbor ->
       send(:"node_#{neighbor}", message)
@@ -340,7 +359,7 @@ defmodule Main do
   - La red de nodos con sus conexiones.
   """
   def run(n, f) when n > 3 * f do
-    Logger.info("\n🌐 Iniciando red blockchain con #{n} nodos (#{f} bizantinos)")
+    Logger.info("\nIniciando red blockchain con #{n} nodos (#{f} bizantinos)")
 
     network = Network.build_network(n, 4, 0.5)
 
@@ -354,7 +373,7 @@ defmodule Main do
       BlockchainNode.start(id, Map.get(network, id), true)
     end)
 
-    Logger.info("✅ Red blockchain iniciada")
+    Logger.info("Red blockchain iniciada")
     network
   end
 
@@ -366,7 +385,7 @@ defmodule Main do
   - `data`: Los datos de la nueva transacción que se propondrán.
   """
   def propose_transaction(node_id, data) do
-    Logger.info("\n💫 Nueva transacción desde nodo #{node_id}: #{data}")
+    Logger.info("\nNueva transacción desde nodo #{node_id}: #{data}")
     BlockchainNode.propose_block(node_id, data)
 
     # Dar tiempo para que la transacción se propague
@@ -384,7 +403,7 @@ defmodule Main do
   """
   def get_blockchain(node_id) do
     chain = BlockchainNode.get_blockchain(node_id)
-    IO.puts("\n🔍 Blockchain del nodo #{node_id}:")
+    IO.puts("\nBlockchain del nodo #{node_id}:")
     IO.puts(Blockchain.to_string(chain))
     chain
   end
@@ -396,7 +415,7 @@ defmodule Main do
   - `network`: El mapa que representa la red de nodos y sus conexiones.
   """
   def print_network_status(network) do
-    IO.puts("\n📊 Estado de la Red:")
+    IO.puts("\nEstado de la Red:")
     Enum.each(network, fn {node, neighbors} ->
       type = if node >= map_size(network) - 1, do: "BIZANTINO", else: "NORMAL"
       IO.puts("Nodo #{node} (#{type}) - Vecinos: #{inspect(neighbors)}")
