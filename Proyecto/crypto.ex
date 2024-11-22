@@ -111,14 +111,36 @@ defmodule Block do
   Verifica si un bloque es válido.
   """
   def valid?(block) do
-    block.hash == Crypto.hash(block)
+    cond do
+      # Verifica que el hash sea correcto
+      block.hash != Crypto.hash(block) ->
+        {:error, "Hash inválido"}
+
+      # Rechaza datos que parezcan maliciosos
+      is_binary(block.data) && String.starts_with?(block.data, "INVALID_DATA_") ->
+        {:error, "Datos maliciosos detectados"}
+
+      # Verifica que el timestamp no esté en el futuro
+      DateTime.compare(block.timestamp, DateTime.utc_now()) == :gt ->
+        {:error, "Timestamp inválido"}
+
+      true ->
+        {:ok, block}
+    end
   end
 
   @doc """
   Verifica si dos bloques consecutivos son válidos.
   """
   def valid?(block1, block2) do
-    valid?(block1) && valid?(block2) && block2.prev_hash == block1.hash
+    with {:ok, _} <- valid?(block1),
+         {:ok, _} <- valid?(block2) do
+      if block2.prev_hash == block1.hash do
+        {:ok, block2}
+      else
+        {:error, "Hash previo no coincide"}
+      end
+    end
   end
 
   @doc """
@@ -158,10 +180,28 @@ defmodule Blockchain do
     prev_block = List.last(chain) || %Block{hash: "0"}
     new_block = Block.new(data, prev_block.hash)
 
-    if valid?(chain ++ [new_block]) do
-      {:ok, chain ++ [new_block]}
-    else
-      {:error, "Invalid block"}
+    case validate_block_for_chain(new_block, chain) do
+      {:ok, _} -> {:ok, chain ++ [new_block]}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Valida un bloque específico para ser añadido a la cadena.
+  """
+  def validate_block_for_chain(block, chain) do
+    cond do
+      # Verifica si el bloque ya existe en la cadena
+      Enum.any?(chain, fn existing -> existing.hash == block.hash end) ->
+        {:error, "Bloque duplicado"}
+
+      # Verifica si el hash previo coincide con el último bloque
+      chain != [] && List.last(chain).hash != block.prev_hash ->
+        {:error, "Hash previo no coincide con el último bloque"}
+
+      # Valida el bloque en sí mismo
+      true ->
+        Block.valid?(block)
     end
   end
 
@@ -182,7 +222,12 @@ defmodule Blockchain do
   def valid?(chain) do
     chain
     |> Enum.chunk_every(2, 1, :discard)
-    |> Enum.all?(fn [block1, block2] -> Block.valid?(block1, block2) end)
+    |> Enum.reduce_while({:ok, []}, fn [block1, block2], {:ok, _} ->
+      case Block.valid?(block1, block2) do
+        {:ok, _} -> {:cont, {:ok, [block1, block2]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 
   @doc """
@@ -264,19 +309,6 @@ defmodule BlockchainNode do
   end
 
   # Función principal de bucle que maneja los mensajes recibidos por el nodo.
-  #
-  # Parámetros:
-  #   - state: Un mapa con el estado actual del nodo que incluye:
-  #     * id: Identificador único del nodo
-  #     * neighbors: Lista de nodos vecinos
-  #     * blockchain: Lista de bloques en la cadena
-  #     * byzantine?: Booleano que indica si el nodo es bizantino
-  #     * processed_blocks: Conjunto de hashes de bloques ya procesados
-  #
-  # El bucle maneja los siguientes mensajes:
-  # - {:get_blockchain, from}: Envía la blockchain actual al proceso solicitante
-  # - {:propose_block, data}: Crea y propaga un nuevo bloque (normal o malicioso)
-  # - {:validate_block, block}: Valida y propaga un bloque recibido
   defp loop(state) do
     receive do
       {:get_blockchain, from} ->
@@ -297,34 +329,37 @@ defmodule BlockchainNode do
             broadcast_to_neighbors(state.neighbors, {:validate_block, new_block})
             loop(%{state | blockchain: new_chain})
           {:error, reason} ->
-            Logger.error("Nodo #{state.id}: #{reason}")
+            Logger.error("Nodo #{state.id}: Error al crear bloque - #{reason}")
             loop(state)
         end
 
-      {:validate_block, block} when state.byzantine? ->
-        unless MapSet.member?(state.processed_blocks, block.hash) do
-          broadcast_to_neighbors(state.neighbors, {:validate_block, block})
-          loop(%{state | processed_blocks: MapSet.put(state.processed_blocks, block.hash)})
-        else
-          loop(state)
-        end
-
       {:validate_block, block} ->
-        if MapSet.member?(state.processed_blocks, block.hash) do
-          loop(state)
-        else
-          case Blockchain.insert(state.blockchain, block.data) do
-            {:ok, new_chain} ->
-              broadcast_to_neighbors(state.neighbors, {:validate_block, block})
-              loop(%{state |
-                blockchain: new_chain,
-                processed_blocks: MapSet.put(state.processed_blocks, block.hash)
-              })
-            {:error, _reason} ->
-              loop(%{state |
-                processed_blocks: MapSet.put(state.processed_blocks, block.hash)
-              })
-          end
+        cond do
+          # Verifica si ya procesamos este bloque
+          MapSet.member?(state.processed_blocks, block.hash) ->
+            loop(state)
+
+          # Si somos bizantinos, solo propagamos el bloque
+          state.byzantine? ->
+            broadcast_to_neighbors(state.neighbors, {:validate_block, block})
+            loop(%{state | processed_blocks: MapSet.put(state.processed_blocks, block.hash)})
+
+          # Nodo normal: validar y posiblemente agregar el bloque
+          true ->
+            case Blockchain.validate_block_for_chain(block, state.blockchain) do
+              {:ok, _} ->
+                new_chain = state.blockchain ++ [block]
+                broadcast_to_neighbors(state.neighbors, {:validate_block, block})
+                loop(%{state |
+                  blockchain: new_chain,
+                  processed_blocks: MapSet.put(state.processed_blocks, block.hash)
+                })
+              {:error, reason} ->
+                Logger.warn("Nodo #{state.id}: Rechazando bloque - #{reason}")
+                loop(%{state |
+                  processed_blocks: MapSet.put(state.processed_blocks, block.hash)
+                })
+            end
         end
     end
   end
@@ -426,6 +461,7 @@ end
 # Ejemplo de uso
 network = Main.run(10, 1)
 Main.print_network_status(network)
-Main.propose_transaction(0, "Transfer: Alice -> Bob: 100 coins")
-Main.propose_transaction(1, "Transfer: Bob -> Charlie: 50 coins")
+Main.propose_transaction(0, "Transferencia: Alice -> Bob: $100")
+Main.propose_transaction(1, "Transferencia: Bob -> Charlie: $20")
+Main.propose_transaction(2, "Transferencia: Charlie -> Alice: $30")
 Main.get_blockchain(0)
